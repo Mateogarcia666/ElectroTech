@@ -1,7 +1,10 @@
 // main.js - VERSIÓN FINAL INTEGRADA CON CONTADOR ACTUALIZABLE
+let nombreUsuario = sessionStorage.getItem("nombreUsuario");
 
+
+saludarclienteStorage();
 // 1. VARIABLES GLOBALES
-let frutasTienda = []; 
+let productosTienda = []; 
 let listaParaOrdenar = []; 
 let carrito = [];
 
@@ -10,6 +13,18 @@ const contenedorProductos = document.getElementById("contenedor-productos");
 const contenedorCarrito = document.getElementById("contenedor-carrito");
 const barraBusqueda = document.getElementById("barra-busqueda");
 const contadorCarrito = document.getElementById("contador-carrito");
+let boton_imprimir = document.getElementById("btn-imprimir");
+
+
+function saludarclienteStorage() {
+    const nombre = sessionStorage.getItem("nombreUsuario");
+    if (!nombre || nombre === "") {
+        console.log("No se encontró nombre de usuario. Redirigiendo a bienvenida.");
+        window.location.href = "bienvenida.html"; 
+        return; 
+    }
+    document.getElementById("datos-alumno").textContent = " Bienvenido " + nombre;
+}
 
 // ------------------------------------------------------
 // 2. CONEXIÓN CON EL SERVIDOR
@@ -20,11 +35,11 @@ async function obtenerProductos() {
         let respuestaFormato = await respuesta.json(); 
         let productos = respuestaFormato.payload; 
 
-        frutasTienda = productos;
-        listaParaOrdenar = frutasTienda.slice(); 
+        productosTienda = productos;
+        listaParaOrdenar = productosTienda.slice(); 
 
-        console.log("Productos cargados:", frutasTienda);
-        mostrarLista(frutasTienda); 
+        console.log("Productos cargados:", productosTienda);
+        mostrarLista(productosTienda); 
 
     } catch (error) {
         console.error("Error al conectar:", error);
@@ -52,12 +67,74 @@ function mostrarLista(productos) {
     if(contenedorProductos) contenedorProductos.innerHTML = htmlProductos;
 }
 
-// --- CARRITO ---
-function agregarACarrito(idFruta) {
-    let frutaSeleccionada = frutasTienda.find(fruta => fruta.id == idFruta);
+async function registrarVenta(precioTotal, idProductos) {
+    try {
+        // let nombreUsuario = sessionStorage.getItem("nombreUsuario");
 
-    if (frutaSeleccionada) {
-        carrito.push(frutaSeleccionada);
+        const fecha = new Date();
+
+        // Visualizamos por consola todos los datos que le mandaremos al endpoint /api/sales
+        console.log(fecha);         // Mon Dec 01 2025 22:01:57 GMT-0300 (Argentina Standard Time)
+        console.log(nombreUsuario); // Gabi
+        console.log(precioTotal);   // 1550
+        console.log(idProductos);   // [ 13, 12, 11 ]
+
+        // Formato MySQL para timestamp
+        // Tenemos que formatear la fecha para que la acepte mysql
+        const fechaFormato = fecha.toISOString().slice(0, 19).replace("T", " "); // MySQL no acepta fechas en formato ISO con milisegundos ni con la Z
+
+        console.log(fechaFormato); // 2025-12-02 01:07:10
+        
+
+        
+        // Preparamos en el objeto data la informacion que le enviaremos al endpoint /api/sales en formato JSON en nuestra peticion POST
+        const data = {
+            nombreUsuario: nombreUsuario,
+            precioTotal: precioTotal,
+            fechaEmision: fechaFormato,
+            productos: idProductos
+        }
+
+        const response = await fetch("http://localhost:3000/api/sales", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if(response.ok) {
+            console.log("Venta registrada: ", result);
+            alert(result.message);
+
+            // Limpieza y redireccion
+            sessionStorage.removeItem("nombreUsuario"); // Eliminamos el nombre de usuario 
+            // sessionStorage.removeItem("carrito")
+            window.location.href = "cliente.html";
+
+        } else {
+            console.error(result);
+            alert("Error en la venta: " + result.message)
+        }
+
+
+
+    } catch (error) {
+        console.error("Error al enviar los datos", error);
+        alert("Error al registrar la venta");
+    }
+}
+
+
+
+// --- CARRITO ---
+function agregarACarrito(idProduc) {
+    let productoSeleccionado = productosTienda.find(producto => producto.id == idProduc);
+
+    if (productoSeleccionado) {
+        carrito.push(productoSeleccionado);
         actualizarCarritoStorage();
     }
 }
@@ -131,8 +208,8 @@ function mostrarCarrito() {
 // --- FILTROS Y ORDENAMIENTO ---
 function filtrarProducto() {
     let valorBusqueda = barraBusqueda.value.toLowerCase();
-    let productosFiltrados = frutasTienda.filter(fruta => 
-        fruta.nombre.toLowerCase().includes(valorBusqueda)
+    let productosFiltrados = productosTienda.filter(producto => 
+        producto.nombre.toLowerCase().includes(valorBusqueda)
     );
     mostrarLista(productosFiltrados);
 }
@@ -156,13 +233,62 @@ if(btnOrdPrecio) {
     });
 }
 
+
+boton_imprimir.addEventListener("click", imprimirTicket);
+
+    function imprimirTicket(){
+        console.table(carrito)
+
+        const idProductos = [];
+
+
+        const { jsPDF } = window.jspdf;
+
+        const doc = new jsPDF();
+
+        let y = 10;
+
+        doc.setFontSize(18);
+
+        doc.text("ElectroTech-ticket de compra", 10, y);
+
+        y += 10;
+
+        carrito.forEach(prod => {
+            idProductos.push(prod.id);
+
+            doc.text(`${prod.nombre} / $${prod.precio}`, 20,y); 
+
+            y += 7
+        });
+
+        const precioTotal = carrito.reduce((total, prod) => total + parseInt(prod.precio), 0);
+
+        y += 5;
+
+
+        doc.text(`Total $${precioTotal}`, 10, y);
+
+
+        doc.save("ticket.pdf");
+
+        registrarVenta(precioTotal, idProductos)
+    }
+
+
+
+
+
+
+
+
 // ------------------------------------------------------
 // 4. INICIALIZACIÓN
 // ------------------------------------------------------
 function init() {
     // Datos alumno
-    const navAlumno = document.getElementById("nav-alumno");
-    if(navAlumno) navAlumno.innerHTML = "<p>Nicolás Macri</p>";
+    saludarclienteStorage();
+    
 
     // Recuperar carrito del localStorage
     const carritoGuardado = localStorage.getItem("carrito");
@@ -171,12 +297,12 @@ function init() {
         mostrarCarrito();
     }
 
-    
     // Actualizar contador al inicio
     actualizarContadorCarrito();
 
     // Llamada al servidor
     obtenerProductos();
+
 }
 
 init();

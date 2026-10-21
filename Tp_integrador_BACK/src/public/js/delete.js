@@ -26,34 +26,36 @@ getProduct_form.addEventListener("submit", async (event) => {
     
     try {
         console.log(`Haciendo peticion GET a la url: ${url}/${idProd}`)
-        //let respuesta = await fetch(`${url}/${idProd}`);
         let respuesta = await fetch(`http://localhost:3000/api/products/${idProd}`);
 
         let datos = await respuesta.json();
 
         console.log(datos); // {payload: Array(1), message: 'Producto encontrado'}
         console.log(datos.payload); // [{…}]
-        console.log(datos.payload[0]); // {id: 1, nombre: 'La maquina de hacer pajaros - Peliculas', tipo: 'LP', precio: 10000, imagen: 'https://i.discogs.com/rKa1bYXYX2w5nIGDULFozlTjVbmM…y9SLTM1MDY2/NjctMTUwOTczNTA0/Ni01NzM4LmpwZWc.jpeg', …}
+        console.log(datos.payload[0]); 
 
         let producto = datos.payload[0];
         console.table(producto);
 
-        // Creamos un nuevo boton a nuestro listado de ver producto
-        let htmlProducto = `
-            <li class="li-listados">
-                <img src="${producto.imagen}" alt="${producto.nombre}">
-                <p>Id: ${producto.id} / Nombre: ${producto.nombre} / <strong>Precio: ${producto.precio}</strong></p>
-            </li>
-            <li class="li-botonera">
-                <input type="button" id="deleteProduct_button" value="Eliminar producto">
-            </li>
-        `;
+    
+    let htmlProducto = `
+    <li class="li-listados">
+        
+        <div class="product-info-display">
+            <img src="${producto.imagen}" alt="${producto.nombre}">
+            <p>Id: ${producto.id} / Nombre: ${producto.nombre} / <strong>Precio: ${producto.precio}</strong></p>
+        </div>
+        
+        <input type="button" id="deleteProduct_button" value="Eliminar producto">
+    </li>
+    `;
+
 
         // Renderizamos el listado en la pagina
         listaProductos.innerHTML = htmlProducto;
 
 
-        // Vamos a asignarle un evento click a nuestro boton "Eliminar producto"
+        
         let deleteProduct_button = document.getElementById("deleteProduct_button");
 
         deleteProduct_button.addEventListener("click", event => {

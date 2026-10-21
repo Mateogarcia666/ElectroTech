@@ -4,6 +4,10 @@
     <link rel="icon" type="image/png" href="/img/icono-robot.png">
     <main>
         <h1>Lista de productos</h1>
+        <hr>
+        <div id="contenedor-productos">
+            <!-- Vamos a iterar el array de productos que le pasamos desde el endpoint -->
+             <% productos.forEach(prod => { %>
         <div class="contenedor-logo">
         <img src="img/logo-final.png" id="logo-pagina">
         </div>
@@ -17,8 +21,10 @@
                     <p>Id: <%= prod.id %></p>
                     <p>$<%= prod.precio %></p>
                 </div>
+             <% }) %>
             <% }) %>
         </div>
     </main>
     
+<img src="/img/logo-final.png" id="logo-pagina">
 <%- include("partials/footer.ejs") %>
